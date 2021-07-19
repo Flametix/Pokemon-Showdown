@@ -5,7 +5,8 @@
 
 'use strict';
 
-const modlog = Config.usesqlite ? new (require('../../.server-dist/modlog')).Modlog('/dev/null', ':memory:') : null;
+const ModlogConstructor = Config.usesqlite ? (require('../../server/modlog')).Modlog : null;
+const modlog = ModlogConstructor ? new ModlogConstructor('/dev/null', ':memory:') : null;
 const assert = require('assert').strict;
 
 Config.usesqlitemodlog = true;
@@ -167,11 +168,11 @@ function lastLine(database, roomid) {
 			const search = await modlog.search('lifotest');
 			assert.equal(search.results.length, 2);
 
-			assert(search.results[0].note !== 'secondwrite');
-			assert(search.results[0].note === 'firstwrite');
+			assert.notEqual(search.results[0].note, 'secondwrite');
+			assert.equal(search.results[0].note, 'firstwrite');
 
-			assert(search.results[1].note !== 'firstwrite');
-			assert(search.results[1].note === 'secondwrite');
+			assert.notEqual(search.results[1].note, 'firstwrite');
+			assert.equal(search.results[1].note, 'secondwrite');
 		});
 
 		it('should support limiting the number of responses', async () => {

@@ -5,6 +5,7 @@
 
 const {testSet, testNotBothMoves, testHasSTAB, testAlwaysHasMove} = require('./tools');
 const assert = require('../assert');
+const {Dex} = require('../../sim/dex');
 
 describe('[Gen 8] Random Battle', () => {
 	const options = {format: 'gen8randombattle'};
@@ -18,8 +19,24 @@ describe('[Gen 8] Random Battle', () => {
 		});
 	});
 
+	it('should not generate Flame Charge + Flare Blitz Solgaleo', () => {
+		testNotBothMoves('solgaleo', options, 'flamecharge', 'flareblitz');
+	});
+
+	it('should not generate Knock Off + Sucker Punch Toxicroak', () => {
+		testNotBothMoves('toxicroak', options, 'knockoff', 'suckerpunch');
+	});
+
 	it('should not generate Swords Dance + Fire Blast Garchomp', () => {
 		testNotBothMoves('garchomp', options, 'swordsdance', 'fireblast');
+	});
+
+	it('should give 4 Attacks Scyther a Choice Band', () => {
+		testSet('scyther', options, set => {
+			if (!set.moves.includes('roost') && !set.moves.includes('swordsdance')) {
+				assert.equal(set.item, "Choice Band");
+			}
+		});
 	});
 
 	it('should give Solid Rock + Shell Smash Carracosta a Weakness Policy', () => {
@@ -46,6 +63,50 @@ describe('[Gen 8] Random Battle', () => {
 			testAlwaysHasMove(pkmn, options, 'outrage');
 		}
 	});
+
+	it('should give Sticky Web Pokémon Sticky Web unless they have setup', () => {
+		for (const pkmn of ['shuckle', 'orbeetle', 'araquanid']) {
+			testSet(pkmn, options, set => {
+				if (set.moves.some(move => Dex.moves.get(move).boosts)) return; // Setup
+				assert(
+					set.moves.includes('stickyweb'),
+					`${pkmn} should always generate Sticky Web (generated moveset: ${set.moves})`
+				);
+			});
+		}
+	});
+
+	it('should give Throat Spray to Shift Gear Toxtricity sets', () => {
+		testSet('toxtricity', options, set => {
+			if (!set.moves.includes('shiftgear')) return;
+			assert.equal(set.item, "Throat Spray", `got ${set.item} instead of Throat Spray`);
+		});
+	});
+
+	it('Toxapex should always have Scald', () => testAlwaysHasMove('toxapex', options, 'scald'));
+
+	it('Shiinotic should always have Moonblast', () => testAlwaysHasMove('shiinotic', options, 'moonblast'));
+
+	it('should prevent Dragon Dance and Extreme Speed from appearing together', () => {
+		testNotBothMoves('dragonite', options, 'dragondance', 'extremespeed');
+	});
+
+	it('Rapidash with Swords Dance should have at least two attacks', () => {
+		const dex = Dex.forFormat(options.format);
+		testSet('rapidash', options, set => {
+			if (!set.moves.includes('swordsdance')) return;
+			assert(set.moves.filter(m => dex.moves.get(m).category !== 'Status').length > 1, `got ${JSON.stringify(set.moves)}`);
+		});
+	});
+
+	it('Celesteela should not get Leech Seed or Protect on Autotomize sets', () => {
+		testNotBothMoves('celesteela', options, 'leechseed', 'autotomize');
+		testNotBothMoves('celesteela', options, 'protect', 'autotomize');
+	});
+
+	it('Landorus-Therian should not get Fly and Stealth Rock on the same set', () => {
+		testNotBothMoves('landorustherian', options, 'fly', 'stealthrock');
+	});
 });
 
 describe('[Gen 8] Random Doubles Battle', () => {
@@ -61,6 +122,10 @@ describe('[Gen 8] Random Doubles Battle', () => {
 		for (const pkmn of ['pinsir', 'pikachu', 'zygarde']) {
 			testHasSTAB(pkmn, options);
 		}
+	});
+
+	it('should give Galarian Darmanitan a Choice Item', () => {
+		testSet('darmanitangalar', options, set => assert(set.item.startsWith('Choice ')));
 	});
 });
 
